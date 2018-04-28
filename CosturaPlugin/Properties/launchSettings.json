@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "CosturaPlugin": {
+      "commandName": "Executable",
+      "executablePath": "$(OutDir)ILSpy.exe",
+      "commandLineArgs": "/separate"
+    }
+  }
+}
