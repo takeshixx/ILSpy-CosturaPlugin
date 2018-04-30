@@ -6,6 +6,15 @@
 
 A pre-built DLL is available in the [release section](https://github.com/takeshixx/ILSpy-CosturaPlugin/releases). Just copy it to the same directory where the `ILSpy.exe` resides and run `ILSpy.exe`.
 
+
+## Usage
+
+This plugin will add two context menu items:
+
+* `Load Embedded References`: Embeded references will be decompressed and the original DLL files will be stored in the same path as the assembly they have been extracted from. The extracted DLL files will be added to ILSpy automatically.
+* `Remove Costura Module Initializer`: This option will remove the `AssemblyLoader.Attach();` call in the module initializer in order to ignore all embedded references. This is required if one wants to patch any of the embedded references and use them in the actual assembly. The original embedded references will still be in the resources of a binary, but they will be ignored in favour of the previously extracted DLL files.
+
+
 ## Building
 
 Clone the ILSpy repository:
