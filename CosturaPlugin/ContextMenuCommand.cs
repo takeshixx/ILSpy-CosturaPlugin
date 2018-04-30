@@ -6,24 +6,24 @@ using System.Windows.Forms;
 using ICSharpCode.ILSpy;
 using ICSharpCode.ILSpy.TreeNodes;
 using Mono.Cecil;
-using Mono.Collections.Generic;
+using Mono.Cecil.Cil;
 
 
 namespace CosturaPlugin
 {
-	[ExportContextMenuEntryAttribute(Header = "_Load Embedded Resources", Icon = "Load.png")]
-	public class SaveAssembly : IContextMenuEntry
+	[ExportContextMenuEntryAttribute(Header = "_Load Embedded References", Category = "CosturaPlugin", Icon = "Load.png")]
+	public class LoadEmbeddedReferences : IContextMenuEntry
 	{
 		public bool IsVisible(TextViewContext context)
 		{
 			return context.SelectedTreeNodes != null && context.SelectedTreeNodes.All(n => n is AssemblyTreeNode);
 		}
-		
+
 		public bool IsEnabled(TextViewContext context)
 		{
 			return context.SelectedTreeNodes != null && context.SelectedTreeNodes.Length == 1;
 		}
-		
+
 		public void Execute(TextViewContext context)
 		{
 			if (context.SelectedTreeNodes == null)
@@ -32,19 +32,15 @@ namespace CosturaPlugin
 			AssemblyDefinition asm = node.LoadedAssembly.GetAssemblyDefinitionOrNull();
 			ModuleDefinition module = asm.MainModule;
 			string assemblyPath = Path.GetDirectoryName(node.LoadedAssembly.FileName);
-			Collection<Resource> compressed_resources = new Collection<Resource>();
 			foreach (var resource in module.Resources) {
-				if (resource.Name.StartsWith("costura.") && resource.Name.EndsWith(".dll.compressed")) {
-					compressed_resources.Add(resource);
-
+				if (! resource.Name.StartsWith("costura.") && ! resource.Name.EndsWith(".dll.compressed")) {
+					continue;
 				}
-			}
-			foreach (var resource in compressed_resources) {
 				string fileName = assemblyPath + "/" + resource.Name.Substring(8, resource.Name.LastIndexOf(".compressed") - 8);
 				if (File.Exists(fileName)) {
 					// Assembly has already been decompressed and saved in the local path, just load it.
 					MainWindow.Instance.CurrentAssemblyList.OpenAssembly(fileName);
-				} else { 
+				} else {
 					EmbeddedResource er = resource as EmbeddedResource;
 					MemoryStream memoryStream = DecompressEmbeddedAssembly(er.GetResourceStream());
 					WriteAssemblyToFile(memoryStream, fileName);
@@ -93,5 +89,67 @@ namespace CosturaPlugin
 			}
 		}
 
+	}
+
+	[ExportContextMenuEntryAttribute(Header = "_Remove Costura Module Initializer", Category = "CosturaPlugin", Icon = "Chop.png")]
+	public class DefuseCostura : IContextMenuEntry
+	{
+		public bool IsVisible(TextViewContext context)
+		{
+			return context.SelectedTreeNodes != null && context.SelectedTreeNodes.All(n => n is AssemblyTreeNode);
+		}
+
+		public bool IsEnabled(TextViewContext context)
+		{
+			return context.SelectedTreeNodes != null && context.SelectedTreeNodes.Length == 1;
+		}
+
+		public void Execute(TextViewContext context)
+		{
+			if (context.SelectedTreeNodes == null)
+				return;
+			AssemblyTreeNode node = (AssemblyTreeNode)context.SelectedTreeNodes[0];
+			AssemblyDefinition asm = node.LoadedAssembly.GetAssemblyDefinitionOrNull();
+			ModuleDefinition module = asm.MainModule;
+
+			foreach (var type in module.Types) {
+				if (type.FullName == "<Module>") {
+					foreach (var method in type.Methods) {
+						if (method.Name == ".cctor") {
+							ClearAttachCallFromMethod(method);
+						}
+					}
+
+				}
+			}
+			SaveFileDialog dlg = new SaveFileDialog();
+			dlg.FileName = node.LoadedAssembly.FileName;
+			dlg.Filter = "Assembly|*.dll;*.exe";
+			if (dlg.ShowDialog() == DialogResult.OK) {
+				asm.MainModule.Write(dlg.FileName);
+				module.Write(dlg.FileName);
+			}
+		}
+
+		private static void ClearAttachCallFromMethod(MethodDefinition methodDefinition)
+		{
+			var body = methodDefinition.Body;
+			var processor = body.GetILProcessor();
+
+			foreach (var instruction in body.Instructions.ToList()) {
+				if (instruction.OpCode == OpCodes.Call) {
+					processor.Remove(instruction);
+				} else if (instruction.OpCode == OpCodes.Ret) {
+					break;
+				}
+			}
+		}
+
+		private static void PrintDebugWindow(string message)
+		{
+			string caption = "CosturaPlugin Debug Output";
+			MessageBoxButtons buttons = MessageBoxButtons.OK;
+			MessageBox.Show(message, caption, buttons);
+		}
 	}
 }
