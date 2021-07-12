@@ -11,7 +11,7 @@ using Mono.Cecil.Cil;
 
 namespace CosturaPlugin
 {
-	[ExportContextMenuEntryAttribute(Header = "_Load Embedded References", Category = "CosturaPlugin", Icon = "Load.png")]
+	[ExportContextMenuEntryAttribute(Header = "_Load Embedded References", Category = "CosturaPlugin", Icon = "Images/Load.png")]
 	public class LoadEmbeddedReferences : IContextMenuEntry
 	{
 		public bool IsVisible(TextViewContext context)
@@ -29,7 +29,7 @@ namespace CosturaPlugin
 			if (context.SelectedTreeNodes == null)
 				return;
 			AssemblyTreeNode node = (AssemblyTreeNode)context.SelectedTreeNodes[0];
-			AssemblyDefinition asm = node.LoadedAssembly.GetAssemblyDefinitionOrNull();
+			AssemblyDefinition asm = AssemblyDefinition.ReadAssembly(node.LoadedAssembly.FileName);
 			ModuleDefinition module = asm.MainModule;
 			string assemblyPath = Path.GetDirectoryName(node.LoadedAssembly.FileName);
 			foreach (var resource in module.Resources) {
@@ -91,7 +91,7 @@ namespace CosturaPlugin
 
 	}
 
-	[ExportContextMenuEntryAttribute(Header = "_Remove Costura Module Initializer", Category = "CosturaPlugin", Icon = "Chop.png")]
+	[ExportContextMenuEntryAttribute(Header = "_Remove Costura Module Initializer", Category = "CosturaPlugin", Icon = "Images/Chop.png")]
 	public class DefuseCostura : IContextMenuEntry
 	{
 		public bool IsVisible(TextViewContext context)
@@ -109,7 +109,7 @@ namespace CosturaPlugin
 			if (context.SelectedTreeNodes == null)
 				return;
 			AssemblyTreeNode node = (AssemblyTreeNode)context.SelectedTreeNodes[0];
-			AssemblyDefinition asm = node.LoadedAssembly.GetAssemblyDefinitionOrNull();
+			AssemblyDefinition asm = AssemblyDefinition.ReadAssembly(node.LoadedAssembly.FileName);
 			ModuleDefinition module = asm.MainModule;
 
 			foreach (var type in module.Types) {
